@@ -1,0 +1,42 @@
+# RawDeployment mode: KServe reconciles a plain Deployment + Service + HPA
+# instead of Knative Service + Istio VirtualService. Much lighter, and the
+# sandbox cluster (2-3x t3.medium, public subnets only) doesn't have the
+# headroom for a full Knative/Istio install.
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: iris-classifier
+  namespace: model-serving
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+spec:
+  predictor:
+    minReplicas: 1
+    maxReplicas: 2
+    containers:
+      - name: kserve-container
+        # Node role already has AmazonEC2ContainerRegistryReadOnly, so no
+        # imagePullSecrets are needed for same-account ECR images.
+        image: 309379105903.dkr.ecr.us-west-2.amazonaws.com/iris-classifier:v1
+        ports:
+          - containerPort: 8080
+            protocol: TCP
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          httpGet:
+            path: /v1/models/iris-classifier
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /v1/models/iris-classifier
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 20

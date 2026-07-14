@@ -1,0 +1,24 @@
+# Standard k8s Ingress, routed by Traefik. RawDeployment mode gives the
+# predictor a plain ClusterIP Service named "<isvc-name>-predictor" — this
+# just fronts it. No host set up yet, so routing is by Host header
+# (nip.io below) rather than a real domain.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: iris-classifier
+  namespace: model-serving
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: a8c0bc4597baa4fa2882420f02f593e3-1945389485.us-west-2.elb.amazonaws.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: iris-classifier-predictor
+                port:
+                  number: 80
